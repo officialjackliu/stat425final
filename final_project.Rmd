@@ -1,0 +1,69 @@
+---
+title: "STAT 425 Final Project"
+author: "Jack Liu, Reed Haas"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+::: {align="center"}
+# **A study of students academic performance Factor**
+:::
+
+#### Group Member Contribution:
+
+-   Jack (EDA and modeling)
+
+-   Reed (model diagnostics and model comparisons)
+
+-   Jack & Reed (conclusion and reed preparation)
+
+## Abstract
+
+## Exploratory Data Analysis
+
+#### data preparation
+
+```{r}
+df = read.csv("/Users/jacksandroids/Documents/UIUC/Spring 2025/stat 425 R Code/final project/StudentsHabits.csv")
+View(df)
+```
+
+```{r}
+cat("The shape/dimension of the student performance dataset is", dim(df))
+
+cat("\n", "the sample size is", nrow(df), " the number of predictors:", ncol(df) - 1)
+```
+
+#### numerical 
+
+#### 
+
+#### graphical
+
+## Model Building
+
+### 1. Linear model with all variables, without interactions (model 1) 
+
+### 2. Diagnostics for the basic linear model 
+
+### 3. Refit a linear model, (model 2)
+
+### 4. Diagnostics for the refitted linear model (model 2)
+
+### 5. Build a model with removed outliers (model 3) 
+
+### 6.  Variable Selection (Model Comparison with Model 3 Included) 
+
+### 7. ANCOVA Model with Interactions (Model Comparison with Model 4 Included) 
+
+### 8. Shrinkage Methods (Ridge and Lasso Regression) 
+
+### 
+
+## Discussion of Results and Conclusions
+
+Based on a series of model building, diagnostics and comparisons, we find that **the following variables are important in determining the performance of a student, measured by the student's final exam score**

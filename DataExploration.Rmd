@@ -1,0 +1,32 @@
+---
+title: "Exploration of Student Habits Data"
+output: pdf_document
+date: Spring 2025
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+\verb|StudentHabits.csv| contains a simulated yet realistic dataset titled “Student Habits vs Academic Performance: A Simulated Study”, featuring 1,000 student records. Each row represents an individual student, capturing daily lifestyle habits such as study time, sleep, social media use, diet quality, mental health rating, and more—mapped against their final exam score.
+
+```{r}
+data <- read.csv("StudentsHabits.csv")
+n <- nrow(data); n
+```
+
+```{r}
+names(data)
+data <- data[, -1]
+```
+
+```{r}
+library(GGally)
+ggpairs(data[,c(3,4,5,8)])
+```
+
+```{r}
+ggplot(data) + 
+  geom_point(aes(y = exam_score, x  = study_hours_per_day)) +
+  facet_grid(vars(part_time_job), vars(diet_quality))
+```
