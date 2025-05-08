@@ -19,48 +19,122 @@ knitr::opts_chunk$set(echo = TRUE)
 
 -   Reed (model diagnostics and model comparisons)
 
--   Jack & Reed (conclusion and reed preparation)
+-   Jack & Reed (conclusion and discussion)
 
 ## Abstract
 
 ## Exploratory Data Analysis
 
-#### data preparation
+### data preparation
 
 ```{r}
 df = read.csv("/Users/jacksandroids/Documents/UIUC/Spring 2025/stat 425 R Code/final project/StudentsHabits.csv")
 View(df)
+print("Drop column 'X'")
+df <- df[, -1]
 ```
 
 ```{r}
 cat("The shape/dimension of the student performance dataset is", dim(df))
 
 cat("\n", "the sample size is", nrow(df), " the number of predictors:", ncol(df) - 1)
+
 ```
 
-#### numerical 
+### numerical
+
+Explore categories, variable types, numerical summaries with demonstrations on overall distributions; additionally, we also explore factor level composition in all categorical variables
+
+```{r}
+cat("the column names are",colnames(df) , "\n", "info of each variable",  str(df))
+```
+
+```{r}
+summary(df)
+```
+
+```{r}
+print("categorical variables analysis" )
+print("extract all categorical variables")
+categorical_vars <- c()
+categorical_vars <- names(df)[sapply(df, function(x) is.character(x) || is.factor(x))]
+categorical_vars
+for (var in categorical_vars) {
+  cat("\n---",var , "---\n")
+  print(table(df[var]))
+  cat("number of observations is", nrow(df[var]), "\n")
+  
+}
+
+```
+
+**observations:**
 
 #### 
 
-#### graphical
+## graphical:
+
+```{r}
+for (var in colnames(df)) {
+  if (is.numeric(df[[var]])  &&  var != "exam_score") {
+  
+    main_title <- paste("Predicting exam scores with", var)
+    x_label <- var
+
+    plot(x = df[[var]] , y = df$exam_score, main = main_title, xlab = x_label, ylab = "exam_score", pch = 19, col = "blue")
+    lm_model <- lm(as.formula(paste("exam_score ~", var)), data =df)
+    abline(lm_model, col = "red", lwd = 4) 
+  }
+}
+```
+
+```{r}
+for (var in colnames(df)) {
+  if (is.character(df[[var]]) &&  var != "exam_score") {
+  
+    main_title <- paste("Boxplot distribution of students' final score on ", var, "factor levels")
+    x_label <- var
+
+    boxplot(df$exam_score ~ df[[var]],drop = FALSE, col = "steelblue",names = levels(factor(df[[var]])),  xlab = x_label, ylab = "exam_score")
+    
+   
+  }
+}
+```
+
+correlation graphs, cross examined between categorical and numerical variables
 
 ## Model Building
 
-### 1. Linear model with all variables, without interactions (model 1) 
+### 1. Linear model with all variables, without interactions (model 1)
 
-### 2. Diagnostics for the basic linear model 
+```{r}
+model_1 = lm(formula = exam_score ~ . , data = df)
+summary(model_1)
+
+model_intercept = lm(formula = exam_score ~ 1 , data = df)
+anova(model_1, model_intercept)
+```
+
+*Context:*
+
+For the initial linear modeling of "exam_score", I fit all column variables, including various factor levels in categorical columns, to predict the linear regression of "exam_score".
+
+*Finding:* this linear model does explain significant variation in response variable ("exam_score") when it compares against an intercept-only linear model, which implies certain predictors in the model is significant in predicting "exam_score" variable.
+
+### 2. Diagnostics for the basic linear model
 
 ### 3. Refit a linear model, (model 2)
 
 ### 4. Diagnostics for the refitted linear model (model 2)
 
-### 5. Build a model with removed outliers (model 3) 
+### 5. Build a model with removed outliers (model 3)
 
-### 6.  Variable Selection (Model Comparison with Model 3 Included) 
+### 6. Variable Selection (Model Comparison with Model 3 Included)
 
-### 7. ANCOVA Model with Interactions (Model Comparison with Model 4 Included) 
+### 7. ANCOVA Model with Interactions (Model Comparison with Model 4 Included)
 
-### 8. Shrinkage Methods (Ridge and Lasso Regression) 
+### 8. Shrinkage Methods (Ridge and Lasso Regression)
 
 ### 
 
