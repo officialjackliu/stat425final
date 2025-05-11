@@ -5,8 +5,8 @@ date: "`r Sys.Date()`"
 output: pdf_document
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+```{r, message=FALSE, echo=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
 ```
 
 ::: {align="center"}
@@ -41,6 +41,45 @@ cat("\n", "the sample size is", nrow(df), " the number of predictors:", ncol(df)
 
 ```
 
+```{r}
+print_model_fit <- function(model) {
+  model_summary <- summary(model)
+  model_name <- deparse(substitute(model))
+  cat("model fit informations for", model_name, "\n")
+  cat("Residual Standard Error:", model_summary$sigma, "\n")
+  cat("R-squared:", model_summary$r.squared, "\n")
+  cat("Adjusted R-squared:", model_summary$adj.r.squared, "\n")
+  cat("F-statistic:", model_summary$fstatistic[1], "on", 
+      model_summary$fstatistic[2], "and", model_summary$fstatistic[3], 
+      "DF, p-value:", pf(model_summary$fstatistic[1], 
+                         model_summary$fstatistic[2], 
+                         model_summary$fstatistic[3], 
+                         lower.tail = FALSE), "\n")
+  cat("\n")
+}
+```
+
+```{r}
+model_1 = lm(formula = exam_score ~ . , data = df)
+summary(model_1)
+
+model_intercept = lm(formula = exam_score ~ 1 , data = df)
+```
+
+```{r}
+library(GGally)
+library(ggplot2)
+library(faraway)
+library(regclass)
+library(ggplot2)
+library(MASS)
+library(lmtest)
+library(boot)
+library(MASS)
+library(leaps)
+library(splines)
+```
+
 ### numerical
 
 Explore categories, variable types, numerical summaries with demonstrations on overall distributions; additionally, we also explore factor level composition in all categorical variables
@@ -60,10 +99,9 @@ categorical_vars <- c()
 categorical_vars <- names(df)[sapply(df, function(x) is.character(x) || is.factor(x))]
 categorical_vars
 for (var in categorical_vars) {
-  cat("\n---",var , "---\n")
+  #cat("---", var , "---")
   print(table(df[var]))
-  cat("number of observations is", nrow(df[var]), "\n")
-  
+  cat("\n")
 }
 
 ```
@@ -75,44 +113,102 @@ for (var in categorical_vars) {
 ## graphical:
 
 ```{r}
-for (var in colnames(df)) {
-  if (is.numeric(df[[var]])  &&  var != "exam_score") {
+numeric_var <- colnames(df)[sapply(df, is.numeric) & colnames(df) != "exam_score"]
+par(mfrow = c(2, 4)) 
+for (var in numeric_var) {
+
   
-    main_title <- paste("Predicting exam scores with", var)
+    main_title <- paste("Predicting with", var)
     x_label <- var
 
     plot(x = df[[var]] , y = df$exam_score, main = main_title, xlab = x_label, ylab = "exam_score", pch = 19, col = "blue")
     lm_model <- lm(as.formula(paste("exam_score ~", var)), data =df)
     abline(lm_model, col = "red", lwd = 4) 
-  }
+  
 }
 ```
 
 ```{r}
-for (var in colnames(df)) {
-  if (is.character(df[[var]]) &&  var != "exam_score") {
-  
-    main_title <- paste("Boxplot distribution of students' final score on ", var, "factor levels")
-    x_label <- var
+# Get the list of categorical variables (excluding "exam_score")
+cat_vars <- colnames(df)[sapply(df, is.character) & colnames(df) != "exam_score"]
 
-    boxplot(df$exam_score ~ df[[var]],drop = FALSE, col = "steelblue",names = levels(factor(df[[var]])),  xlab = x_label, ylab = "exam_score")
-    
-   
-  }
+# Set up plotting area: adjust rows (e.g., 2) and columns (e.g., 3) depending on how many plots
+par(mfrow = c(2, 3))  
+# Loop through categorical variables
+for (var in cat_vars) {
+  main_title <- paste( var)
+  x_label <- var
+
+  boxplot(df$exam_score ~ df[[var]],
+          drop = FALSE,
+          col = "steelblue",
+          names = levels(factor(df[[var]])),
+          xlab = x_label,
+          ylab = "exam_score",
+          main = main_title)
 }
 ```
 
-correlation graphs, cross examined between categorical and numerical variables
+correlation graphs, non linear pattern, cross examined between categorical and numerical variables
+
+```{r}
+# Correlation Graph 
+
+#ggpairs(df)
+
+print("Correlation Assessment")
+
+# Insepct correlation in numerical prediction variables
+
+df_numeric <- df[sapply(df, is.numeric)]
+df_cate <- df[sapply(df, is.character)]
+corr_matrix <- cor(df_numeric[, -9])
+corr_matrix
+print("overall very small correlation value between all numerical predictor variables, chances of multicollinearity in numerical variables in small")
+
+```
+
+```{r}
+# df_cate should be a character vector of column names
+df_cate <- c("gender", "part_time_job", "diet_quality", 
+             "parental_education_level", "internet_quality", 
+             "extracurricular_participation")
+
+# Loop through all unique pairs
+for (i in 1:(length(df_cate) - 1)) {
+  for (j in (i + 1):length(df_cate)) {
+    var1 <- df_cate[[i]]  # use double brackets to get string
+    var2 <- df_cate[[j]]
+    
+    tbl <- table(df[[var1]], df[[var2]])
+    test <- chisq.test(tbl)
+    
+    cat( var1, "vs", var2, "      ", round(test$p.value, 5), "\n")
+  }
+}
+
+print("We use Chi-Square test checks whether two categorical variables are independent (null hypothesis) or associated  (alternative hypothesis) at significance level of 0.05")
+print("we fail to reject the Chi-squared test's null hypothesis and conclude that there is no strong assciation between all categorical variables")
+
+
+```
+
+```{r}
+
+
+
+#vif(model_1)
+round(VIF(model_1), dig=5)
+```
+
+Conclusion: all variables in the student performance dataset have low correlations, so we can carry out the modeling stage safely.
 
 ## Model Building
 
 ### 1. Linear model with all variables, without interactions (model 1)
 
 ```{r}
-model_1 = lm(formula = exam_score ~ . , data = df)
-summary(model_1)
 
-model_intercept = lm(formula = exam_score ~ 1 , data = df)
 anova(model_1, model_intercept)
 ```
 
@@ -122,15 +218,223 @@ For the initial linear modeling of "exam_score", I fit all column variables, inc
 
 *Finding:* this linear model does explain significant variation in response variable ("exam_score") when it compares against an intercept-only linear model, which implies certain predictors in the model is significant in predicting "exam_score" variable.
 
-### 2. Diagnostics for the basic linear model
+assumptions needed to review: linearity, independence of error, homosedasticity, normality of errors, no multicollinearity (checked)
 
-### 3. Refit a linear model, (model 2)
+### 2. Outliers Diagnosis
 
-### 4. Diagnostics for the refitted linear model (model 2)
+```{r}
+lev <- influence(model_1)$hat
+p <- ncol(df); n <- nrow(df)
+lev[lev > (2 * p / n)]
+#high leverage points
+# halfnorm(lev, length(lev[lev > (2 * p / n)]), labs=row.names(df), ylab="Leverage")
+print("observed students that have high-leverage data")
+df[lev > (2*p/n), ]
 
-### 5. Build a model with removed outliers (model 3)
+```
 
-### 6. Variable Selection (Model Comparison with Model 3 Included)
+```{r}
+print("check for outliers")
+print("First use studenized residuals")
+rstud <- rstudent(model_1)
+cutoff <- abs(qt(0.05/(2*dim(df)[1]), model_1$df.residual-1))
+paste("the Bonferroni corrected outlier cutoff value is", cutoff)
+sort(abs(rstud), decreasing=TRUE)[1:10]
+# utlier_points <- which(sort(abs(rstud), decreasing=TRUE)[1:10] > cutoff) 
+paste("outlier points in Bonferroni correction are observed 226th, 472th, and 431th observations; Totally 3 high outlier points in 65 high leverage points")
+
+paste("the cutoff without Without Bonferroni correction is",abs(qt(0.05/2, model_1$df.residual-1)))
+
+paste("Cook distance graph")
+cook = cooks.distance(model_1)
+halfnorm(cook, labs = row.names(df), ylab = "Cook's distance")
+which.max(cook)
+```
+
+```{r}
+df_new <- df[-c(226, 431, 472), ]
+
+df_no_high_leverage <- df[lev <= (2 * p / n), ]
+model_no_lev <- lm(exam_score ~ ., data = df_no_high_leverage)
+model_new <- lm(exam_score ~ ., data = df_new)
+print_model_fit(model_no_lev)
+print_model_fit(model_new)
+print_model_fit(model_1)
+paste("drop outlier points (226th, 431th, and 472th observations) only ")
+```
+
+### 3. Diagnose Linearity & Homoscedasticity (equal variance)
+
+```{r}
+par(mfrow=c(2,2))
+plot(model_new)
+```
+
+```{r}
+plot(fitted(model_new), residuals(model_new),
+     xlab = "Fitted Values",
+     ylab = "Residuals",
+     main = "Residuals vs Fitted Values",
+     pch = 19, col = "steelblue")
+abline(h = 0, lwd = 2, col = "red")
+
+
+ggplot(data = data.frame(fitted = fitted(model_new),
+                         residuals = residuals(model_new)),
+       aes(x = fitted, y = residuals)) +
+  geom_point(color = "steelblue", alpha = 0.6) +
+  geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
+  labs(title = "Residuals vs Fitted Values",
+       x = "Fitted Values",
+       y = "Residuals") +
+  theme_minimal(base_size = 14) + geom_smooth()
+
+
+```
+
+### 4. Box-Cox Transformation Diagnosis
+
+**log transformation, delete later**
+
+```{r}
+
+df_log <- df_new
+numeric_var <- sapply(df_log, is.numeric) & names(df_log) != "exam_score"
+df_log[numeric_var] <- log(df_log[numeric_var] + 1)
+model_log <- lm(exam_score ~ ., data = df_log)
+print_model_fit(model_log)
+print_model_fit(model_new)
+```
+
+```{r}
+paste("ggplot clearly demonsrtates non-linearity and unequal variance due curved pattern, high residual deviations")
+paste("remedy: boxcox transformation model")
+
+
+bc <- boxcox(model_new, plotit=TRUE, lambda = seq(1,5,0.05))
+boxcox(model_new, plotit=TRUE, lambda = seq(1,5,0.05))
+lambda_optimal <- bc$x[which.max(bc$y)]
+cat("Optimal lambda value is", lambda_optimal)
+
+```
+
+**apply lambda transformation using this equation**
+
+$$
+g(y) = \frac{y^{\lambda} - 1}{\lambda}
+$$
+
+```{r}
+#df_new$exam_score <- (((df_new$exam_score)**(lambda_optimal) - 1) / lambda_optimal)
+model_bc <- lm(( ((exam_score)^(lambda_optimal) - 1) / lambda_optimal) ~ . , data =  df_new)
+print_model_fit(model_bc)
+cat("\n")
+print_model_fit(model_new)
+
+print("Box-Cox transformation improves model fit")
+```
+
+```{r}
+par(mfrow=c(2,2))
+plot(model_bc)
+```
+
+```{r}
+# Load spline function
+
+
+# Fit a model using natural splines for top 5 predictors
+model_spline <- lm(
+  exam_score ~ 
+    ns(study_hours_per_day, df = 4) + 
+    ns(mental_health_rating, df = 4) +
+    ns(sleep_hours, df = 4) +
+    ns(social_media_hours, df = 4) +
+    ns(exercise_frequency, df = 4) +
+    gender + part_time_job + 
+    attendance_percentage + diet_quality + 
+    parental_education_level + internet_quality + 
+    extracurricular_participation + age,
+  data = df
+)
+
+summary(model_spline)
+```
+
+### 
+
+### 5. Independence of Error diagnosis
+
+```{r}
+
+dwtest(model_bc, alternative = "two.sided")
+paste("there is no evidence of autocorrelation in the residuals and the errors appear to be independent")
+```
+
+### 6. Normality diagnosis
+
+```{r}
+shapiro.test(residuals(model_bc))
+shapiro.test(residuals(model_new))
+
+plot(model_bc, which = 2)
+paste("Remedy: use GLM  to diagnose non-normality issue")
+
+model_glm <- glm(exam_score ~ ., data = df_new)
+summary(model_glm)
+# print_model_fit(model_glm)
+
+```
+
+```{r}
+cat("remove outlier points 568th, 779th, and 23rd in QQ-residuals graph")
+df_new <- df_new[-c(568, 779, 23), ]
+cat("Remedy: bootstrap")
+
+
+boot_fn <- function(data, indices) {
+  d <- data[indices, ]
+  coef(lm(exam_score ~ ., data = d))
+}
+boot(df_new, boot_fn, R = 1000)
+```
+
+```{r}
+model_ols <- lm(exam_score ~ ., data = df_new)
+
+model_robust <- rlm(exam_score ~ ., data = df_new)
+ols_coef <- coef(model_ols)
+robust_coef <- coef(model_robust)
+diff <- abs(ols_coef - robust_coef)
+print(sort(diff, decreasing = TRUE))
+paste("	•	Large differences (e.g., in Intercept, parental_education_levelMaster, study_hours_per_day) suggest that outliers or non-normality are strongly influencing these predictors, we will further investigate those predictors using Variable selection")
+```
+
+```{r}
+shapiro.test(resid(model_ols))
+shapiro.test(resid(model_robust))
+```
+
+### 
+
+### 
+
+### 7. Variable Selection
+
+```{r}
+cat("use leap & bound algorithm to determine best model size")
+
+leap = regsubsets(exam_score ~., data = df_new)
+length(leap)
+#rs = summary(leap)
+#rs$which
+
+selected_model <- summary(leap)$which 
+model_size <- rowSums(selected_model)
+
+## [1] "Displays selected variables in model size 2 to 8 A formatted table"
+selected_model[model_size %in% 2:8,]
+```
 
 ### 7. ANCOVA Model with Interactions (Model Comparison with Model 4 Included)
 
